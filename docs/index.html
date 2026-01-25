@@ -115,6 +115,7 @@
 
         // 초기화
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing...');
             dateInput.value = currentDate;
             loadSettings();
             updateTodayBadge();
@@ -122,15 +123,21 @@
 
         // 설정 관리
         function loadSettings() {
+            console.log('loadSettings called');
             const url = localStorage.getItem('supabase_url');
             const key = localStorage.getItem('supabase_key');
+            console.log('Stored URL:', url ? 'exists' : 'none');
+            console.log('Stored Key:', key ? 'exists' : 'none');
 
             if (url && key) {
                 supabaseUrlInput.value = url;
                 supabaseKeyInput.value = key;
                 initSupabase(url, key);
             } else {
+                console.log('No settings found, showing modal');
                 settingsModal.style.display = 'flex';
+                settingsModal.style.visibility = 'visible';
+                settingsModal.style.opacity = '1';
             }
         }
 
