@@ -191,26 +191,45 @@ with tab1:
         reason = st.text_area("매매 근거 (Why?)", height=100)
 
     # 이미지 업로드 섹션
-    st.markdown("#### 📷 차트/뉴스 이미지")
-    image_option = st.radio(
-        "이미지 첨부 방식",
-        ["업로드", "URL 입력", "없음"],
-        horizontal=True
-    )
+    st.markdown("---")
+    st.subheader("📷 이미지 첨부 (Chart/News)")
 
-    uploaded_file = None
-    image_url = None
-
-    if image_option == "업로드":
-        uploaded_file = st.file_uploader(
-            "이미지 파일 선택",
-            type=["png", "jpg", "jpeg", "gif", "webp"],
-            help="차트 캡처나 뉴스 스크린샷을 업로드하세요"
+    # Step 1: 이미지 선택 (Input)
+    with st.container():
+        st.markdown("##### 1️⃣ 이미지 선택")
+        image_option = st.radio(
+            "이미지 첨부 방식",
+            ["업로드", "URL 입력", "없음"],
+            horizontal=True,
+            label_visibility="collapsed"
         )
-        if uploaded_file:
-            st.image(uploaded_file, caption="미리보기", width=300)
-    elif image_option == "URL 입력":
-        image_url = st.text_input("이미지 URL", placeholder="https://...")
+
+        uploaded_file = None
+        image_url = None
+
+        if image_option == "업로드":
+            uploaded_file = st.file_uploader(
+                "이미지 파일 선택",
+                type=["png", "jpg", "jpeg", "gif", "webp"],
+                help="차트 캡처나 뉴스 스크린샷을 업로드하세요"
+            )
+        elif image_option == "URL 입력":
+            image_url = st.text_input("이미지 URL", placeholder="https://...")
+
+    # Step 2: 미리보기 (Preview)
+    st.markdown("##### 2️⃣ 미리보기")
+    preview_container = st.container()
+    
+    with preview_container:
+        if image_option == "업로드" and uploaded_file:
+            st.image(uploaded_file, caption="업로드 이미지 미리보기", use_container_width=True)
+        elif image_option == "URL 입력" and image_url:
+            try:
+                st.image(image_url, caption="URL 이미지 미리보기", use_container_width=True)
+            except:
+                st.error("이미지를 불러올 수 없습니다. URL을 확인해주세요.")
+        else:
+            st.info("이미지가 선택되지 않았습니다.")
 
     if st.button("기록 저장 (Save Trade)", use_container_width=True):
         if not ticker or price <= 0 or qty <= 0:
