@@ -81,6 +81,25 @@
             <h3>📋 최근 노트</h3>
             <div id="recentList"></div>
         </section>
+
+        <!-- 내보내기 섹션 -->
+        <section class="export-section">
+            <h3>📤 내보내기 (Export)</h3>
+            <div class="export-controls">
+                <div class="date-range">
+                    <label>시작일</label>
+                    <input type="date" id="exportStartDate">
+                </div>
+                <div class="date-range">
+                    <label>종료일</label>
+                    <input type="date" id="exportEndDate">
+                </div>
+            </div>
+            <div class="export-buttons">
+                <button id="exportCsv" class="export-btn csv">📊 CSV (엑셀)</button>
+                <button id="exportJson" class="export-btn json">📋 JSON</button>
+            </div>
+        </section>
     </div>
 
     <script>
@@ -530,6 +549,120 @@
             loadNote(noteDate);
             updateTodayBadge();
         };
+
+        // ============ 내보내기 기능 ============
+        const exportStartDate = document.getElementById('exportStartDate');
+        const exportEndDate = document.getElementById('exportEndDate');
+        const exportCsvBtn = document.getElementById('exportCsv');
+        const exportJsonBtn = document.getElementById('exportJson');
+
+        // 기본값: 최근 30일
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        exportEndDate.value = today.toISOString().split('T')[0];
+        exportStartDate.value = thirtyDaysAgo.toISOString().split('T')[0];
+
+        // 데이터 조회
+        async function fetchExportData() {
+            if (!supabaseClient) {
+                showStatus('Supabase 연결이 필요합니다.', 'error');
+                return null;
+            }
+
+            const startDate = exportStartDate.value;
+            const endDate = exportEndDate.value;
+
+            if (!startDate || !endDate) {
+                showStatus('날짜를 선택해주세요.', 'error');
+                return null;
+            }
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('daily_notes')
+                    .select('*')
+                    .gte('note_date', startDate)
+                    .lte('note_date', endDate)
+                    .order('note_date', { ascending: true });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    showStatus('해당 기간에 데이터가 없습니다.', 'error');
+                    return null;
+                }
+
+                return data;
+            } catch (err) {
+                showStatus('조회 실패: ' + err.message, 'error');
+                return null;
+            }
+        }
+
+        // CSV 내보내기
+        exportCsvBtn.addEventListener('click', async () => {
+            showStatus('데이터 조회 중...', 'loading');
+            const data = await fetchExportData();
+            if (!data) return;
+
+            // CSV 헤더
+            const headers = ['날짜', '메모', '태그', '이미지URL'];
+            const csvRows = [headers.join(',')];
+
+            // CSV 데이터
+            data.forEach(note => {
+                const row = [
+                    note.note_date,
+                    `"${(note.content || '').replace(/"/g, '""')}"`,
+                    `"${(note.tags || []).join(', ')}"`,
+                    `"${(note.image_urls || []).join(', ')}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+
+            // BOM 추가 (엑셀에서 한글 깨짐 방지)
+            const bom = '\uFEFF';
+            const csvContent = bom + csvRows.join('\n');
+
+            // 다운로드
+            downloadFile(csvContent, `daily_notes_${exportStartDate.value}_${exportEndDate.value}.csv`, 'text/csv;charset=utf-8');
+            showStatus(`${data.length}개 노트 CSV 내보내기 완료!`, 'success');
+        });
+
+        // JSON 내보내기
+        exportJsonBtn.addEventListener('click', async () => {
+            showStatus('데이터 조회 중...', 'loading');
+            const data = await fetchExportData();
+            if (!data) return;
+
+            // 필요한 필드만 추출
+            const exportData = data.map(note => ({
+                date: note.note_date,
+                content: note.content,
+                tags: note.tags,
+                image_urls: note.image_urls
+            }));
+
+            const jsonContent = JSON.stringify(exportData, null, 2);
+
+            // 다운로드
+            downloadFile(jsonContent, `daily_notes_${exportStartDate.value}_${exportEndDate.value}.json`, 'application/json');
+            showStatus(`${data.length}개 노트 JSON 내보내기 완료!`, 'success');
+        });
+
+        // 파일 다운로드 헬퍼
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
     </script>
 </body>
 </html>
