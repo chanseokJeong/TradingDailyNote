@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Notes - 주식 일지</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- 날짜 헤더 -->
+        <header class="date-header">
+            <button id="prevDay" class="nav-btn">&larr;</button>
+            <div class="date-display">
+                <span id="dateIcon">📅</span>
+                <input type="date" id="noteDate" value="{{ today }}">
+                <span id="todayBadge" class="today-badge">오늘</span>
+            </div>
+            <button id="nextDay" class="nav-btn">&rarr;</button>
+        </header>
+
+        <!-- 이미지 드롭 영역 -->
+        <section class="drop-zone" id="dropZone">
+            <div class="drop-placeholder" id="dropPlaceholder">
+                <span class="drop-icon">📷</span>
+                <p>이미지를 드래그하거나 클릭하세요</p>
+                <p class="drop-hint">Ctrl+V로 붙여넣기도 가능합니다</p>
+            </div>
+            <div class="image-preview" id="imagePreview"></div>
+            <input type="file" id="fileInput" accept="image/*" multiple hidden>
+        </section>
+
+        <!-- 메모 영역 -->
+        <section class="note-section">
+            <label for="noteContent">오늘의 메모:</label>
+            <textarea
+                id="noteContent"
+                placeholder="반도체 테마 강세, 종가베팅 고려..."
+                rows="3"
+            ></textarea>
+            <div class="tags-display" id="tagsDisplay"></div>
+            <input
+                type="text"
+                id="tagInput"
+                placeholder="태그 입력 후 Enter (예: #반도체)"
+                class="tag-input"
+            >
+        </section>
+
+        <!-- 저장 버튼 -->
+        <button id="saveBtn" class="save-btn">
+            <span class="save-icon">💾</span> 저장
+        </button>
+
+        <!-- 상태 메시지 -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- 최근 노트 목록 -->
+        <section class="recent-notes">
+            <h3>📋 최근 노트</h3>
+            <div id="recentList"></div>
+        </section>
+    </div>
+
+    <script>
+        // 상태
+        let currentDate = '{{ today }}';
+        let uploadedImages = [];
+        let tags = [];
+
+        // DOM 요소
+        const dateInput = document.getElementById('noteDate');
+        const dropZone = document.getElementById('dropZone');
+        const dropPlaceholder = document.getElementById('dropPlaceholder');
+        const imagePreview = document.getElementById('imagePreview');
+        const fileInput = document.getElementById('fileInput');
+        const noteContent = document.getElementById('noteContent');
+        const tagInput = document.getElementById('tagInput');
+        const tagsDisplay = document.getElementById('tagsDisplay');
+        const saveBtn = document.getElementById('saveBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const todayBadge = document.getElementById('todayBadge');
+        const recentList = document.getElementById('recentList');
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNote(currentDate);
+            loadRecentNotes();
+            updateTodayBadge();
+        });
+
+        // 날짜 변경
+        dateInput.addEventListener('change', (e) => {
+            currentDate = e.target.value;
+            loadNote(currentDate);
+            updateTodayBadge();
+        });
+
+        // 이전/다음 날
+        document.getElementById('prevDay').addEventListener('click', () => {
+            const d = new Date(currentDate);
+            d.setDate(d.getDate() - 1);
+            currentDate = d.toISOString().split('T')[0];
+            dateInput.value = currentDate;
+            loadNote(currentDate);
+            updateTodayBadge();
+        });
+
+        document.getElementById('nextDay').addEventListener('click', () => {
+            const d = new Date(currentDate);
+            d.setDate(d.getDate() + 1);
+            currentDate = d.toISOString().split('T')[0];
+            dateInput.value = currentDate;
+            loadNote(currentDate);
+            updateTodayBadge();
+        });
+
+        function updateTodayBadge() {
+            const today = new Date().toISOString().split('T')[0];
+            todayBadge.style.display = (currentDate === today) ? 'inline' : 'none';
+        }
+
+        // 드래그앤드롭
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // 클릭해서 파일 선택
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // 붙여넣기 (Ctrl+V)
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const file = item.getAsFile();
+                    handleFiles([file]);
+                    break;
+                }
+            }
+        });
+
+        // 파일 처리 및 업로드
+        async function handleFiles(files) {
+            for (let file of files) {
+                if (!file.type.startsWith('image/')) continue;
+
+                showStatus('이미지 업로드 중...', 'loading');
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const res = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        uploadedImages.push(data.url);
+                        renderImages();
+                        showStatus('이미지 업로드 완료!', 'success');
+                    } else {
+                        showStatus('업로드 실패: ' + data.error, 'error');
+                    }
+                } catch (err) {
+                    showStatus('업로드 오류: ' + err.message, 'error');
+                }
+            }
+        }
+
+        // 이미지 미리보기 렌더링
+        function renderImages() {
+            if (uploadedImages.length === 0) {
+                dropPlaceholder.style.display = 'block';
+                imagePreview.innerHTML = '';
+                return;
+            }
+
+            dropPlaceholder.style.display = 'none';
+            imagePreview.innerHTML = uploadedImages.map((url, idx) => `
+                <div class="image-item">
+                    <img src="${url}" alt="Image ${idx + 1}">
+                    <button class="remove-btn" onclick="removeImage(${idx})">&times;</button>
+                </div>
+            `).join('');
+        }
+
+        // 이미지 제거
+        window.removeImage = function(idx) {
+            uploadedImages.splice(idx, 1);
+            renderImages();
+        };
+
+        // 태그 입력
+        tagInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                let tag = tagInput.value.trim();
+                if (!tag) return;
+
+                // # 자동 추가
+                if (!tag.startsWith('#')) {
+                    tag = '#' + tag;
+                }
+
+                if (!tags.includes(tag)) {
+                    tags.push(tag);
+                    renderTags();
+                }
+                tagInput.value = '';
+            }
+        });
+
+        // 태그 렌더링
+        function renderTags() {
+            tagsDisplay.innerHTML = tags.map((tag, idx) => `
+                <span class="tag">
+                    ${tag}
+                    <button onclick="removeTag(${idx})">&times;</button>
+                </span>
+            `).join('');
+        }
+
+        // 태그 제거
+        window.removeTag = function(idx) {
+            tags.splice(idx, 1);
+            renderTags();
+        };
+
+        // 노트 로드
+        async function loadNote(noteDate) {
+            try {
+                const res = await fetch(`/api/note/${noteDate}`);
+                const data = await res.json();
+
+                if (data.success && data.note) {
+                    noteContent.value = data.note.content || '';
+                    tags = data.note.tags || [];
+                    uploadedImages = data.note.image_urls || [];
+                    renderTags();
+                    renderImages();
+                } else {
+                    // 해당 날짜 노트 없음 - 초기화
+                    noteContent.value = '';
+                    tags = [];
+                    uploadedImages = [];
+                    renderTags();
+                    renderImages();
+                }
+            } catch (err) {
+                showStatus('로드 오류: ' + err.message, 'error');
+            }
+        }
+
+        // 노트 저장
+        saveBtn.addEventListener('click', async () => {
+            const payload = {
+                note_date: currentDate,
+                content: noteContent.value,
+                tags: tags,
+                image_urls: uploadedImages
+            };
+
+            showStatus('저장 중...', 'loading');
+
+            try {
+                const res = await fetch('/api/note', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showStatus('저장 완료!', 'success');
+                    loadRecentNotes();
+                } else {
+                    showStatus('저장 실패: ' + data.error, 'error');
+                }
+            } catch (err) {
+                showStatus('저장 오류: ' + err.message, 'error');
+            }
+        });
+
+        // 상태 메시지 표시
+        function showStatus(msg, type) {
+            statusMessage.textContent = msg;
+            statusMessage.className = 'status-message ' + type;
+            statusMessage.style.display = 'block';
+
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // 최근 노트 목록 로드
+        async function loadRecentNotes() {
+            try {
+                const res = await fetch('/api/notes?limit=10');
+                const data = await res.json();
+
+                if (data.success && data.notes.length > 0) {
+                    recentList.innerHTML = data.notes.map(note => `
+                        <div class="recent-item" onclick="goToDate('${note.note_date}')">
+                            <span class="recent-date">${note.note_date}</span>
+                            <span class="recent-content">${(note.content || '').substring(0, 50)}${(note.content || '').length > 50 ? '...' : ''}</span>
+                            ${note.tags && note.tags.length > 0 ? `<span class="recent-tags">${note.tags.join(' ')}</span>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    recentList.innerHTML = '<p class="no-notes">아직 노트가 없습니다.</p>';
+                }
+            } catch (err) {
+                console.error('최근 노트 로드 오류:', err);
+            }
+        }
+
+        // 특정 날짜로 이동
+        window.goToDate = function(noteDate) {
+            currentDate = noteDate;
+            dateInput.value = noteDate;
+            loadNote(noteDate);
+            updateTodayBadge();
+        };
+    </script>
+</body>
+</html>
