@@ -68,17 +68,28 @@
             >
         </section>
 
-        <!-- 저장 버튼 -->
-        <button id="saveBtn" class="save-btn">
-            <span class="save-icon">💾</span> 저장
-        </button>
+        <!-- 버튼 영역 -->
+        <div class="button-group">
+            <button id="saveBtn" class="save-btn">
+                <span class="save-icon">💾</span> 저장
+            </button>
+            <button id="deleteBtn" class="delete-btn" style="display: none;">
+                <span>🗑️</span> 삭제
+            </button>
+        </div>
 
         <!-- 상태 메시지 -->
         <div id="statusMessage" class="status-message"></div>
 
         <!-- 최근 노트 목록 -->
         <section class="recent-notes">
-            <h3>📋 최근 노트</h3>
+            <div class="recent-header">
+                <h3>📋 최근 노트</h3>
+                <span id="filterTag" class="filter-tag" style="display: none;">
+                    <span id="filterTagName"></span>
+                    <button onclick="clearTagFilter()">&times;</button>
+                </span>
+            </div>
             <div id="recentList"></div>
         </section>
 
@@ -129,13 +140,13 @@
         const tagInput = document.getElementById('tagInput');
         const tagsDisplay = document.getElementById('tagsDisplay');
         const saveBtn = document.getElementById('saveBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
         const statusMessage = document.getElementById('statusMessage');
         const todayBadge = document.getElementById('todayBadge');
         const recentList = document.getElementById('recentList');
 
         // 초기화
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM loaded, initializing...');
             dateInput.value = currentDate;
             loadSettings();
             updateTodayBadge();
@@ -143,21 +154,15 @@
 
         // 설정 관리
         function loadSettings() {
-            console.log('loadSettings called');
             const url = localStorage.getItem('supabase_url');
             const key = localStorage.getItem('supabase_key');
-            console.log('Stored URL:', url ? 'exists' : 'none');
-            console.log('Stored Key:', key ? 'exists' : 'none');
 
             if (url && key) {
                 supabaseUrlInput.value = url;
                 supabaseKeyInput.value = key;
                 initSupabase(url, key);
             } else {
-                console.log('No settings found, showing modal');
                 settingsModal.style.display = 'flex';
-                settingsModal.style.visibility = 'visible';
-                settingsModal.style.opacity = '1';
             }
         }
 
@@ -265,6 +270,25 @@
             }
         });
 
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+S: 저장
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveBtn.click();
+            }
+            // Ctrl+←: 이전 날짜
+            if (e.ctrlKey && e.key === 'ArrowLeft') {
+                e.preventDefault();
+                document.getElementById('prevDay').click();
+            }
+            // Ctrl+→: 다음 날짜
+            if (e.ctrlKey && e.key === 'ArrowRight') {
+                e.preventDefault();
+                document.getElementById('nextDay').click();
+            }
+        });
+
         // 이미지 압축 함수
         const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
         const MAX_WIDTH = 1920;
@@ -305,7 +329,6 @@
                             type: 'image/jpeg',
                             lastModified: Date.now()
                         });
-                        console.log(`압축: ${(file.size/1024/1024).toFixed(2)}MB → ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
                         resolve(compressedFile);
                     }, 'image/jpeg', COMPRESSION_QUALITY);
                 };
@@ -441,11 +464,13 @@
                     noteContent.value = data.content || '';
                     tags = data.tags || [];
                     uploadedImages = data.image_urls || [];
+                    deleteBtn.style.display = 'flex';
                 } else {
                     currentNoteId = null;
                     noteContent.value = '';
                     tags = [];
                     uploadedImages = [];
+                    deleteBtn.style.display = 'none';
                 }
                 renderTags();
                 renderImages();
@@ -495,9 +520,47 @@
                 }
 
                 showStatus('저장 완료!', 'success');
+                deleteBtn.style.display = 'flex';
                 loadRecentNotes();
             } catch (err) {
                 showStatus('저장 실패: ' + err.message, 'error');
+            }
+        });
+
+        // 노트 삭제
+        deleteBtn.addEventListener('click', async () => {
+            if (!supabaseClient || !currentNoteId) {
+                showStatus('삭제할 노트가 없습니다.', 'error');
+                return;
+            }
+
+            if (!confirm('이 노트를 삭제하시겠습니까?')) {
+                return;
+            }
+
+            showStatus('삭제 중...', 'loading');
+
+            try {
+                const { error } = await supabaseClient
+                    .from('daily_notes')
+                    .delete()
+                    .eq('id', currentNoteId);
+
+                if (error) throw error;
+
+                // 상태 초기화
+                currentNoteId = null;
+                noteContent.value = '';
+                tags = [];
+                uploadedImages = [];
+                renderTags();
+                renderImages();
+                deleteBtn.style.display = 'none';
+
+                showStatus('삭제 완료!', 'success');
+                loadRecentNotes();
+            } catch (err) {
+                showStatus('삭제 실패: ' + err.message, 'error');
             }
         });
 
@@ -514,34 +577,63 @@
             }
         }
 
+        // 태그 필터 상태
+        let currentFilterTag = null;
+        const filterTagEl = document.getElementById('filterTag');
+        const filterTagName = document.getElementById('filterTagName');
+
         // 최근 노트 목록 로드
-        async function loadRecentNotes() {
+        async function loadRecentNotes(filterTag = null) {
             if (!supabaseClient) return;
 
             try {
-                const { data, error } = await supabaseClient
+                let query = supabaseClient
                     .from('daily_notes')
                     .select('*')
                     .order('note_date', { ascending: false })
-                    .limit(10);
+                    .limit(20);
+
+                // 태그 필터 적용
+                if (filterTag) {
+                    query = query.contains('tags', [filterTag]);
+                }
+
+                const { data, error } = await query;
 
                 if (error) throw error;
 
                 if (data && data.length > 0) {
                     recentList.innerHTML = data.map(note => `
-                        <div class="recent-item" onclick="goToDate('${note.note_date}')">
-                            <span class="recent-date">${note.note_date}</span>
-                            <span class="recent-content">${(note.content || '').substring(0, 50)}${(note.content || '').length > 50 ? '...' : ''}</span>
-                            ${note.tags && note.tags.length > 0 ? `<span class="recent-tags">${note.tags.join(' ')}</span>` : ''}
+                        <div class="recent-item">
+                            <span class="recent-date" onclick="goToDate('${note.note_date}')">${note.note_date}</span>
+                            <span class="recent-content" onclick="goToDate('${note.note_date}')">${(note.content || '').substring(0, 50)}${(note.content || '').length > 50 ? '...' : ''}</span>
+                            ${note.tags && note.tags.length > 0 ? `<span class="recent-tags">${note.tags.map(t => `<span class="clickable-tag" onclick="filterByTag('${t}')">${t}</span>`).join(' ')}</span>` : ''}
                         </div>
                     `).join('');
                 } else {
-                    recentList.innerHTML = '<p class="no-notes">아직 노트가 없습니다.</p>';
+                    recentList.innerHTML = filterTag
+                        ? '<p class="no-notes">해당 태그의 노트가 없습니다.</p>'
+                        : '<p class="no-notes">아직 노트가 없습니다.</p>';
                 }
             } catch (err) {
-                console.error('최근 노트 로드 오류:', err);
+                // 조용히 실패 (최근 노트 로드 실패는 치명적이지 않음)
             }
         }
+
+        // 태그로 필터링
+        window.filterByTag = function(tag) {
+            currentFilterTag = tag;
+            filterTagName.textContent = tag;
+            filterTagEl.style.display = 'inline-flex';
+            loadRecentNotes(tag);
+        };
+
+        // 필터 해제
+        window.clearTagFilter = function() {
+            currentFilterTag = null;
+            filterTagEl.style.display = 'none';
+            loadRecentNotes();
+        };
 
         window.goToDate = function(noteDate) {
             currentDate = noteDate;
