@@ -84,7 +84,7 @@
 
     <script>
         // Supabase 클라이언트
-        let supabase = null;
+        let supabaseClient = null;
         const BUCKET_NAME = 'trade-images';
 
         // 상태
@@ -143,7 +143,7 @@
 
         function initSupabase(url, key) {
             try {
-                supabase = window.supabase.createClient(url, key);
+                supabaseClient = window.supabase.createClient(url, key);
                 settingsModal.style.display = 'none';
                 loadNote(currentDate);
                 loadRecentNotes();
@@ -174,7 +174,7 @@
 
         // 모달 바깥 클릭 시 닫기
         settingsModal.addEventListener('click', (e) => {
-            if (e.target === settingsModal && supabase) {
+            if (e.target === settingsModal && supabaseClient) {
                 settingsModal.style.display = 'none';
             }
         });
@@ -247,7 +247,7 @@
 
         // 파일 처리 및 업로드
         async function handleFiles(files) {
-            if (!supabase) {
+            if (!supabaseClient) {
                 showStatus('Supabase 연결이 필요합니다.', 'error');
                 return;
             }
@@ -263,7 +263,7 @@
                     const uniqueName = `${Date.now()}_${Math.random().toString(36).substr(2, 8)}.${ext}`;
 
                     // Supabase Storage에 업로드
-                    const { data, error } = await supabase.storage
+                    const { data, error } = await supabaseClient.storage
                         .from(BUCKET_NAME)
                         .upload(uniqueName, file, {
                             contentType: file.type
@@ -272,7 +272,7 @@
                     if (error) throw error;
 
                     // 공개 URL 가져오기
-                    const { data: urlData } = supabase.storage
+                    const { data: urlData } = supabaseClient.storage
                         .from(BUCKET_NAME)
                         .getPublicUrl(uniqueName);
 
@@ -346,10 +346,10 @@
 
         // 노트 로드
         async function loadNote(noteDate) {
-            if (!supabase) return;
+            if (!supabaseClient) return;
 
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('daily_notes')
                     .select('*')
                     .eq('note_date', noteDate)
@@ -379,7 +379,7 @@
 
         // 노트 저장
         saveBtn.addEventListener('click', async () => {
-            if (!supabase) {
+            if (!supabaseClient) {
                 showStatus('Supabase 연결이 필요합니다.', 'error');
                 return;
             }
@@ -397,7 +397,7 @@
                 let result;
                 if (currentNoteId) {
                     // 업데이트
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('daily_notes')
                         .update(payload)
                         .eq('id', currentNoteId)
@@ -407,7 +407,7 @@
                     result = data;
                 } else {
                     // 새로 생성
-                    const { data, error } = await supabase
+                    const { data, error } = await supabaseClient
                         .from('daily_notes')
                         .insert(payload)
                         .select()
@@ -439,10 +439,10 @@
 
         // 최근 노트 목록 로드
         async function loadRecentNotes() {
-            if (!supabase) return;
+            if (!supabaseClient) return;
 
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('daily_notes')
                     .select('*')
                     .order('note_date', { ascending: false })
