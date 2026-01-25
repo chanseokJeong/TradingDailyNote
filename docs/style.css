@@ -207,6 +207,12 @@ body {
     margin-top: 5px;
 }
 
+.drop-limit {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-top: 3px;
+}
+
 /* 이미지 미리보기 */
 .image-preview {
     display: flex;

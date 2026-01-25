@@ -44,7 +44,8 @@
             <div class="drop-placeholder" id="dropPlaceholder">
                 <span class="drop-icon">📷</span>
                 <p>이미지를 드래그하거나 클릭하세요</p>
-                <p class="drop-hint">Ctrl+V로 붙여넣기도 가능합니다</p>
+                <p class="drop-hint">Ctrl+V 붙여넣기 가능 | 여러 장 업로드 가능</p>
+                <p class="drop-limit">최대 5MB (초과 시 자동 압축)</p>
             </div>
             <div class="image-preview" id="imagePreview"></div>
             <input type="file" id="fileInput" accept="image/*" multiple hidden>
@@ -245,6 +246,55 @@
             }
         });
 
+        // 이미지 압축 함수
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        const MAX_WIDTH = 1920;
+        const MAX_HEIGHT = 1080;
+        const COMPRESSION_QUALITY = 0.8;
+
+        async function compressImage(file) {
+            return new Promise((resolve) => {
+                // 5MB 이하면 그대로 반환
+                if (file.size <= MAX_FILE_SIZE) {
+                    resolve(file);
+                    return;
+                }
+
+                const img = new Image();
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                img.onload = () => {
+                    let { width, height } = img;
+
+                    // 비율 유지하면서 리사이즈
+                    if (width > MAX_WIDTH) {
+                        height = (height * MAX_WIDTH) / width;
+                        width = MAX_WIDTH;
+                    }
+                    if (height > MAX_HEIGHT) {
+                        width = (width * MAX_HEIGHT) / height;
+                        height = MAX_HEIGHT;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        });
+                        console.log(`압축: ${(file.size/1024/1024).toFixed(2)}MB → ${(compressedFile.size/1024/1024).toFixed(2)}MB`);
+                        resolve(compressedFile);
+                    }, 'image/jpeg', COMPRESSION_QUALITY);
+                };
+
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
         // 파일 처리 및 업로드
         async function handleFiles(files) {
             if (!supabaseClient) {
@@ -255,11 +305,19 @@
             for (let file of files) {
                 if (!file.type.startsWith('image/')) continue;
 
+                const originalSize = (file.size / 1024 / 1024).toFixed(2);
+
+                // 5MB 초과 시 압축
+                if (file.size > MAX_FILE_SIZE) {
+                    showStatus(`이미지 압축 중... (${originalSize}MB)`, 'loading');
+                    file = await compressImage(file);
+                }
+
                 showStatus('이미지 업로드 중...', 'loading');
 
                 try {
                     // 고유 파일명 생성
-                    const ext = file.name.split('.').pop() || 'png';
+                    const ext = file.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'png');
                     const uniqueName = `${Date.now()}_${Math.random().toString(36).substr(2, 8)}.${ext}`;
 
                     // Supabase Storage에 업로드
