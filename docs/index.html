@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Notes - 주식 일지</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <!-- 설정 모달 -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <h2>Supabase 설정</h2>
@@ -22,109 +20,112 @@
     </div>
 
     <div class="container">
-        <!-- 헤더 -->
         <div class="top-bar">
             <h1 class="app-title">Daily Notes</h1>
             <button id="settingsBtn" class="settings-btn" title="설정">⚙️</button>
         </div>
 
-        <!-- 날짜 헤더 -->
-        <header class="date-header">
-            <button id="prevDay" class="nav-btn">&larr;</button>
-            <div class="date-display">
-                <span id="dateIcon">📅</span>
-                <input type="date" id="noteDate">
-                <span id="todayBadge" class="today-badge">오늘</span>
-            </div>
-            <button id="nextDay" class="nav-btn">&rarr;</button>
-        </header>
+        <div class="workspace">
+            <aside class="left-pane">
+                <section class="recent-notes panel-card">
+                    <div class="recent-header">
+                        <h3>최근 노트</h3>
+                        <span id="filterTag" class="filter-tag" style="display: none;">
+                            <span id="filterTagName"></span>
+                            <button onclick="clearTagFilter()">&times;</button>
+                        </span>
+                    </div>
+                    <div id="recentList"></div>
+                </section>
 
-        <!-- 이미지 드롭 영역 -->
-        <section class="drop-zone" id="dropZone">
-            <div class="drop-placeholder" id="dropPlaceholder">
-                <span class="drop-icon">📷</span>
-                <p>이미지를 드래그하거나 클릭하세요</p>
-                <p class="drop-hint">Ctrl+V 붙여넣기 가능 | 여러 장 업로드 가능</p>
-                <p class="drop-limit">최대 5MB (초과 시 자동 압축)</p>
-            </div>
-            <div class="image-preview" id="imagePreview"></div>
-            <input type="file" id="fileInput" accept="image/*" multiple hidden>
-        </section>
+                <section class="export-section panel-card">
+                    <h3>내보내기 (Export)</h3>
+                    <div class="export-controls">
+                        <div class="date-range">
+                            <label>시작일</label>
+                            <input type="date" id="exportStartDate">
+                        </div>
+                        <div class="date-range">
+                            <label>종료일</label>
+                            <input type="date" id="exportEndDate">
+                        </div>
+                    </div>
+                    <div class="export-buttons">
+                        <button id="exportCsv" class="export-btn csv">CSV (엑셀)</button>
+                        <button id="exportJson" class="export-btn json">JSON</button>
+                    </div>
+                </section>
+            </aside>
 
-        <!-- 메모 영역 -->
-        <section class="note-section">
-            <label for="noteContent">오늘의 메모:</label>
-            <textarea
-                id="noteContent"
-                placeholder="반도체 테마 강세, 종가베팅 고려..."
-                rows="3"
-            ></textarea>
-            <div class="tags-display" id="tagsDisplay"></div>
-            <input
-                type="text"
-                id="tagInput"
-                placeholder="태그 입력 후 Enter (예: #반도체)"
-                class="tag-input"
-            >
-        </section>
+            <main class="right-pane">
+                <header class="date-header panel-card">
+                    <button id="prevDay" class="nav-btn">&larr;</button>
+                    <div class="date-display">
+                        <span id="dateIcon">📅</span>
+                        <input type="date" id="noteDate">
+                        <span id="todayBadge" class="today-badge">오늘</span>
+                    </div>
+                    <button id="nextDay" class="nav-btn">&rarr;</button>
+                </header>
 
-        <!-- 버튼 영역 -->
-        <div class="button-group">
-            <button id="saveBtn" class="save-btn">
-                <span class="save-icon">💾</span> 저장
-            </button>
-            <button id="deleteBtn" class="delete-btn" style="display: none;">
-                <span>🗑️</span> 삭제
-            </button>
+                <section class="preview-layout">
+                    <section class="drop-zone panel-card" id="dropZone">
+                        <div class="drop-placeholder" id="dropPlaceholder">
+                            <span class="drop-icon">📷</span>
+                            <p>이미지를 드래그하거나 클릭하세요</p>
+                            <p class="drop-hint">Ctrl+V 붙여넣기 가능 | 여러 장 업로드 가능</p>
+                            <p class="drop-limit">최대 5MB (초과 시 자동 압축)</p>
+                        </div>
+                        <div class="image-preview" id="imagePreview"></div>
+                        <input type="file" id="fileInput" accept="image/*" multiple hidden>
+                    </section>
+
+                    <section class="focus-view panel-card">
+                        <div id="focusEmpty" class="focus-empty">선택된 이미지가 없습니다</div>
+                        <img id="focusImage" alt="선택 이미지 확대 보기" style="display: none;" onclick="openFocusedImage()">
+                    </section>
+                </section>
+
+                <section class="note-section panel-card">
+                    <label for="noteContent">오늘의 메모:</label>
+                    <textarea
+                        id="noteContent"
+                        placeholder="반도체 테마 강세, 종가 베팅 고려..."
+                        rows="6"
+                    ></textarea>
+                    <div class="tags-display" id="tagsDisplay"></div>
+                    <input
+                        type="text"
+                        id="tagInput"
+                        placeholder="태그 입력 후 Enter (예: #반도체)"
+                        class="tag-input"
+                    >
+                </section>
+
+                <div class="button-group">
+                    <button id="saveBtn" class="save-btn">
+                        <span class="save-icon">💾</span> 저장
+                    </button>
+                    <button id="deleteBtn" class="delete-btn" style="display: none;">
+                        <span>🗑️</span> 삭제
+                    </button>
+                </div>
+
+                <div id="statusMessage" class="status-message"></div>
+            </main>
         </div>
-
-        <!-- 상태 메시지 -->
-        <div id="statusMessage" class="status-message"></div>
-
-        <!-- 최근 노트 목록 -->
-        <section class="recent-notes">
-            <div class="recent-header">
-                <h3>📋 최근 노트</h3>
-                <span id="filterTag" class="filter-tag" style="display: none;">
-                    <span id="filterTagName"></span>
-                    <button onclick="clearTagFilter()">&times;</button>
-                </span>
-            </div>
-            <div id="recentList"></div>
-        </section>
-
-        <!-- 내보내기 섹션 -->
-        <section class="export-section">
-            <h3>📤 내보내기 (Export)</h3>
-            <div class="export-controls">
-                <div class="date-range">
-                    <label>시작일</label>
-                    <input type="date" id="exportStartDate">
-                </div>
-                <div class="date-range">
-                    <label>종료일</label>
-                    <input type="date" id="exportEndDate">
-                </div>
-            </div>
-            <div class="export-buttons">
-                <button id="exportCsv" class="export-btn csv">📊 CSV (엑셀)</button>
-                <button id="exportJson" class="export-btn json">📋 JSON</button>
-            </div>
-        </section>
     </div>
 
     <script>
-        // Supabase 클라이언트
         let supabaseClient = null;
         const BUCKET_NAME = 'trade-images';
 
-        // 상태
         let currentDate = new Date().toISOString().split('T')[0];
         let uploadedImages = [];
+        let selectedImageIndex = -1;
         let tags = [];
         let currentNoteId = null;
 
-        // DOM 요소
         const settingsModal = document.getElementById('settingsModal');
         const settingsBtn = document.getElementById('settingsBtn');
         const supabaseUrlInput = document.getElementById('supabaseUrl');
@@ -136,6 +137,8 @@
         const dropPlaceholder = document.getElementById('dropPlaceholder');
         const imagePreview = document.getElementById('imagePreview');
         const fileInput = document.getElementById('fileInput');
+        const focusImage = document.getElementById('focusImage');
+        const focusEmpty = document.getElementById('focusEmpty');
         const noteContent = document.getElementById('noteContent');
         const tagInput = document.getElementById('tagInput');
         const tagsDisplay = document.getElementById('tagsDisplay');
@@ -145,14 +148,12 @@
         const todayBadge = document.getElementById('todayBadge');
         const recentList = document.getElementById('recentList');
 
-        // 초기화
         document.addEventListener('DOMContentLoaded', () => {
             dateInput.value = currentDate;
             loadSettings();
             updateTodayBadge();
         });
 
-        // 설정 관리
         function loadSettings() {
             const url = localStorage.getItem('supabase_url');
             const key = localStorage.getItem('supabase_key');
@@ -172,7 +173,7 @@
                 settingsModal.style.display = 'none';
                 loadNote(currentDate);
                 loadRecentNotes();
-                showStatus('연결됨', 'success');
+                showStatus('연결 성공', 'success');
             } catch (err) {
                 showStatus('연결 실패: ' + err.message, 'error');
                 settingsModal.style.display = 'flex';
@@ -197,18 +198,17 @@
             initSupabase(url, key);
         });
 
-        // 모달 바깥 클릭 시 닫기
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal && supabaseClient) {
                 settingsModal.style.display = 'none';
             }
         });
 
-        // 날짜 변경
         dateInput.addEventListener('change', (e) => {
             currentDate = e.target.value;
             loadNote(currentDate);
             updateTodayBadge();
+            loadRecentNotes(currentFilterTag);
         });
 
         document.getElementById('prevDay').addEventListener('click', () => {
@@ -218,6 +218,7 @@
             dateInput.value = currentDate;
             loadNote(currentDate);
             updateTodayBadge();
+            loadRecentNotes(currentFilterTag);
         });
 
         document.getElementById('nextDay').addEventListener('click', () => {
@@ -227,6 +228,7 @@
             dateInput.value = currentDate;
             loadNote(currentDate);
             updateTodayBadge();
+            loadRecentNotes(currentFilterTag);
         });
 
         function updateTodayBadge() {
@@ -234,7 +236,6 @@
             todayBadge.style.display = (currentDate === today) ? 'inline' : 'none';
         }
 
-        // 드래그앤드롭
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('drag-over');
@@ -258,7 +259,6 @@
             handleFiles(e.target.files);
         });
 
-        // 붙여넣기 (Ctrl+V)
         document.addEventListener('paste', (e) => {
             const items = e.clipboardData.items;
             for (let item of items) {
@@ -270,34 +270,28 @@
             }
         });
 
-        // 키보드 단축키
         document.addEventListener('keydown', (e) => {
-            // Ctrl+S: 저장
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
                 saveBtn.click();
             }
-            // Ctrl+←: 이전 날짜
             if (e.ctrlKey && e.key === 'ArrowLeft') {
                 e.preventDefault();
                 document.getElementById('prevDay').click();
             }
-            // Ctrl+→: 다음 날짜
             if (e.ctrlKey && e.key === 'ArrowRight') {
                 e.preventDefault();
                 document.getElementById('nextDay').click();
             }
         });
 
-        // 이미지 압축 함수
-        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        const MAX_FILE_SIZE = 5 * 1024 * 1024;
         const MAX_WIDTH = 1920;
         const MAX_HEIGHT = 1080;
         const COMPRESSION_QUALITY = 0.8;
 
         async function compressImage(file) {
             return new Promise((resolve) => {
-                // 5MB 이하면 그대로 반환
                 if (file.size <= MAX_FILE_SIZE) {
                     resolve(file);
                     return;
@@ -310,7 +304,6 @@
                 img.onload = () => {
                     let { width, height } = img;
 
-                    // 비율 유지하면서 리사이즈
                     if (width > MAX_WIDTH) {
                         height = (height * MAX_WIDTH) / width;
                         width = MAX_WIDTH;
@@ -337,10 +330,9 @@
             });
         }
 
-        // 파일 처리 및 업로드
         async function handleFiles(files) {
             if (!supabaseClient) {
-                showStatus('Supabase 연결이 필요합니다.', 'error');
+                showStatus('Supabase 연결이 필요합니다', 'error');
                 return;
             }
 
@@ -349,7 +341,6 @@
 
                 const originalSize = (file.size / 1024 / 1024).toFixed(2);
 
-                // 5MB 초과 시 압축
                 if (file.size > MAX_FILE_SIZE) {
                     showStatus(`이미지 압축 중... (${originalSize}MB)`, 'loading');
                     file = await compressImage(file);
@@ -358,12 +349,10 @@
                 showStatus('이미지 업로드 중...', 'loading');
 
                 try {
-                    // 고유 파일명 생성
                     const ext = file.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'png');
-                    const uniqueName = `${Date.now()}_${Math.random().toString(36).substr(2, 8)}.${ext}`;
+                    const uniqueName = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
 
-                    // Supabase Storage에 업로드
-                    const { data, error } = await supabaseClient.storage
+                    const { error } = await supabaseClient.storage
                         .from(BUCKET_NAME)
                         .upload(uniqueName, file, {
                             contentType: file.type
@@ -371,47 +360,75 @@
 
                     if (error) throw error;
 
-                    // 공개 URL 가져오기
                     const { data: urlData } = supabaseClient.storage
                         .from(BUCKET_NAME)
                         .getPublicUrl(uniqueName);
 
                     uploadedImages.push(urlData.publicUrl);
+                    selectedImageIndex = uploadedImages.length - 1;
                     renderImages();
-                    showStatus('이미지 업로드 완료!', 'success');
+                    showStatus('이미지 업로드 완료', 'success');
                 } catch (err) {
                     showStatus('업로드 실패: ' + err.message, 'error');
                 }
             }
         }
 
-        // 이미지 미리보기 렌더링
         function renderImages() {
             if (uploadedImages.length === 0) {
                 dropPlaceholder.style.display = 'block';
                 imagePreview.innerHTML = '';
+                selectedImageIndex = -1;
+                renderFocusedImage();
                 return;
+            }
+
+            if (selectedImageIndex < 0 || selectedImageIndex >= uploadedImages.length) {
+                selectedImageIndex = 0;
             }
 
             dropPlaceholder.style.display = 'none';
             imagePreview.innerHTML = uploadedImages.map((url, idx) => `
-                <div class="image-item">
-                    <img src="${url}" alt="Image ${idx + 1}" onclick="openImage('${url}')">
+                <div class="image-item ${idx === selectedImageIndex ? 'selected' : ''}">
+                    <img src="${url}" alt="Image ${idx + 1}" onclick="event.stopPropagation(); selectImage(${idx})">
                     <button class="remove-btn" onclick="event.stopPropagation(); removeImage(${idx})">&times;</button>
                 </div>
             `).join('');
+
+            renderFocusedImage();
         }
 
-        window.openImage = function(url) {
-            window.open(url, '_blank');
+        function renderFocusedImage() {
+            if (selectedImageIndex < 0 || !uploadedImages[selectedImageIndex]) {
+                focusImage.style.display = 'none';
+                focusEmpty.style.display = 'flex';
+                return;
+            }
+
+            focusImage.src = uploadedImages[selectedImageIndex];
+            focusImage.style.display = 'block';
+            focusEmpty.style.display = 'none';
+        }
+
+        window.selectImage = function(idx) {
+            selectedImageIndex = idx;
+            renderImages();
+        };
+
+        window.openFocusedImage = function() {
+            if (selectedImageIndex >= 0 && uploadedImages[selectedImageIndex]) {
+                window.open(uploadedImages[selectedImageIndex], '_blank');
+            }
         };
 
         window.removeImage = function(idx) {
             uploadedImages.splice(idx, 1);
+            if (selectedImageIndex >= uploadedImages.length) {
+                selectedImageIndex = uploadedImages.length - 1;
+            }
             renderImages();
         };
 
-        // 태그 입력
         tagInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -444,7 +461,6 @@
             renderTags();
         };
 
-        // 노트 로드
         async function loadNote(noteDate) {
             if (!supabaseClient) return;
 
@@ -464,14 +480,17 @@
                     noteContent.value = data.content || '';
                     tags = data.tags || [];
                     uploadedImages = data.image_urls || [];
+                    selectedImageIndex = uploadedImages.length > 0 ? 0 : -1;
                     deleteBtn.style.display = 'flex';
                 } else {
                     currentNoteId = null;
                     noteContent.value = '';
                     tags = [];
                     uploadedImages = [];
+                    selectedImageIndex = -1;
                     deleteBtn.style.display = 'none';
                 }
+
                 renderTags();
                 renderImages();
             } catch (err) {
@@ -479,10 +498,9 @@
             }
         }
 
-        // 노트 저장
         saveBtn.addEventListener('click', async () => {
             if (!supabaseClient) {
-                showStatus('Supabase 연결이 필요합니다.', 'error');
+                showStatus('Supabase 연결이 필요합니다', 'error');
                 return;
             }
 
@@ -498,7 +516,6 @@
             try {
                 let result;
                 if (currentNoteId) {
-                    // 업데이트
                     const { data, error } = await supabaseClient
                         .from('daily_notes')
                         .update(payload)
@@ -508,7 +525,6 @@
                     if (error) throw error;
                     result = data;
                 } else {
-                    // 새로 생성
                     const { data, error } = await supabaseClient
                         .from('daily_notes')
                         .insert(payload)
@@ -519,15 +535,14 @@
                     currentNoteId = result.id;
                 }
 
-                showStatus('저장 완료!', 'success');
+                showStatus('저장 완료', 'success');
                 deleteBtn.style.display = 'flex';
-                loadRecentNotes();
+                loadRecentNotes(currentFilterTag);
             } catch (err) {
                 showStatus('저장 실패: ' + err.message, 'error');
             }
         });
 
-        // 노트 삭제
         deleteBtn.addEventListener('click', async () => {
             if (!supabaseClient || !currentNoteId) {
                 showStatus('삭제할 노트가 없습니다.', 'error');
@@ -548,23 +563,22 @@
 
                 if (error) throw error;
 
-                // 상태 초기화
                 currentNoteId = null;
                 noteContent.value = '';
                 tags = [];
                 uploadedImages = [];
+                selectedImageIndex = -1;
                 renderTags();
                 renderImages();
                 deleteBtn.style.display = 'none';
 
-                showStatus('삭제 완료!', 'success');
-                loadRecentNotes();
+                showStatus('삭제 완료', 'success');
+                loadRecentNotes(currentFilterTag);
             } catch (err) {
                 showStatus('삭제 실패: ' + err.message, 'error');
             }
         });
 
-        // 상태 메시지 표시
         function showStatus(msg, type) {
             statusMessage.textContent = msg;
             statusMessage.className = 'status-message ' + type;
@@ -577,12 +591,10 @@
             }
         }
 
-        // 태그 필터 상태
         let currentFilterTag = null;
         const filterTagEl = document.getElementById('filterTag');
         const filterTagName = document.getElementById('filterTagName');
 
-        // 최근 노트 목록 로드
         async function loadRecentNotes(filterTag = null) {
             if (!supabaseClient) return;
 
@@ -591,23 +603,23 @@
                     .from('daily_notes')
                     .select('*')
                     .order('note_date', { ascending: false })
-                    .limit(20);
+                    .limit(30);
 
-                // 태그 필터 적용
                 if (filterTag) {
                     query = query.contains('tags', [filterTag]);
                 }
 
                 const { data, error } = await query;
-
                 if (error) throw error;
 
                 if (data && data.length > 0) {
                     recentList.innerHTML = data.map(note => `
-                        <div class="recent-item">
-                            <span class="recent-date" onclick="goToDate('${note.note_date}')">${note.note_date}</span>
-                            <span class="recent-content" onclick="goToDate('${note.note_date}')">${(note.content || '').substring(0, 50)}${(note.content || '').length > 50 ? '...' : ''}</span>
-                            ${note.tags && note.tags.length > 0 ? `<span class="recent-tags">${note.tags.map(t => `<span class="clickable-tag" onclick="filterByTag('${t}')">${t}</span>`).join(' ')}</span>` : ''}
+                        <div class="recent-item ${note.note_date === currentDate ? 'active' : ''}" onclick="goToDate('${note.note_date}')">
+                            <span class="recent-date">${note.note_date}</span>
+                            <span class="recent-content">${(note.content || '').substring(0, 70)}${(note.content || '').length > 70 ? '...' : ''}</span>
+                            ${note.tags && note.tags.length > 0
+                                ? `<span class="recent-tags">${note.tags.map(t => `<span class="clickable-tag" onclick="event.stopPropagation(); filterByTag('${t}')">${t}</span>`).join(' ')}</span>`
+                                : ''}
                         </div>
                     `).join('');
                 } else {
@@ -616,11 +628,10 @@
                         : '<p class="no-notes">아직 노트가 없습니다.</p>';
                 }
             } catch (err) {
-                // 조용히 실패 (최근 노트 로드 실패는 치명적이지 않음)
+                recentList.innerHTML = '<p class="no-notes">최근 노트를 불러오지 못했습니다.</p>';
             }
         }
 
-        // 태그로 필터링
         window.filterByTag = function(tag) {
             currentFilterTag = tag;
             filterTagName.textContent = tag;
@@ -628,7 +639,6 @@
             loadRecentNotes(tag);
         };
 
-        // 필터 해제
         window.clearTagFilter = function() {
             currentFilterTag = null;
             filterTagEl.style.display = 'none';
@@ -640,22 +650,20 @@
             dateInput.value = noteDate;
             loadNote(noteDate);
             updateTodayBadge();
+            loadRecentNotes(currentFilterTag);
         };
 
-        // ============ 내보내기 기능 ============
         const exportStartDate = document.getElementById('exportStartDate');
         const exportEndDate = document.getElementById('exportEndDate');
         const exportCsvBtn = document.getElementById('exportCsv');
         const exportJsonBtn = document.getElementById('exportJson');
 
-        // 기본값: 최근 30일
         const today = new Date();
         const thirtyDaysAgo = new Date(today);
         thirtyDaysAgo.setDate(today.getDate() - 30);
         exportEndDate.value = today.toISOString().split('T')[0];
         exportStartDate.value = thirtyDaysAgo.toISOString().split('T')[0];
 
-        // 데이터 조회
         async function fetchExportData() {
             if (!supabaseClient) {
                 showStatus('Supabase 연결이 필요합니다.', 'error');
@@ -681,7 +689,7 @@
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
-                    showStatus('해당 기간에 데이터가 없습니다.', 'error');
+                    showStatus('해당 기간의 데이터가 없습니다.', 'error');
                     return null;
                 }
 
@@ -692,17 +700,14 @@
             }
         }
 
-        // CSV 내보내기
         exportCsvBtn.addEventListener('click', async () => {
             showStatus('데이터 조회 중...', 'loading');
             const data = await fetchExportData();
             if (!data) return;
 
-            // CSV 헤더
             const headers = ['날짜', '메모', '태그', '이미지URL'];
             const csvRows = [headers.join(',')];
 
-            // CSV 데이터
             data.forEach(note => {
                 const row = [
                     note.note_date,
@@ -713,22 +718,22 @@
                 csvRows.push(row.join(','));
             });
 
-            // BOM 추가 (엑셀에서 한글 깨짐 방지)
             const bom = '\uFEFF';
             const csvContent = bom + csvRows.join('\n');
 
-            // 다운로드
-            downloadFile(csvContent, `daily_notes_${exportStartDate.value}_${exportEndDate.value}.csv`, 'text/csv;charset=utf-8');
-            showStatus(`${data.length}개 노트 CSV 내보내기 완료!`, 'success');
+            downloadFile(
+                csvContent,
+                `daily_notes_${exportStartDate.value}_${exportEndDate.value}.csv`,
+                'text/csv;charset=utf-8'
+            );
+            showStatus(`${data.length}개 노트 CSV 내보내기 완료`, 'success');
         });
 
-        // JSON 내보내기
         exportJsonBtn.addEventListener('click', async () => {
             showStatus('데이터 조회 중...', 'loading');
             const data = await fetchExportData();
             if (!data) return;
 
-            // 필요한 필드만 추출
             const exportData = data.map(note => ({
                 date: note.note_date,
                 content: note.content,
@@ -737,13 +742,14 @@
             }));
 
             const jsonContent = JSON.stringify(exportData, null, 2);
-
-            // 다운로드
-            downloadFile(jsonContent, `daily_notes_${exportStartDate.value}_${exportEndDate.value}.json`, 'application/json');
-            showStatus(`${data.length}개 노트 JSON 내보내기 완료!`, 'success');
+            downloadFile(
+                jsonContent,
+                `daily_notes_${exportStartDate.value}_${exportEndDate.value}.json`,
+                'application/json'
+            );
+            showStatus(`${data.length}개 노트 JSON 내보내기 완료`, 'success');
         });
 
-        // 파일 다운로드 헬퍼
         function downloadFile(content, filename, mimeType) {
             const blob = new Blob([content], { type: mimeType });
             const url = URL.createObjectURL(blob);
