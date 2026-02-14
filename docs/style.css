@@ -444,6 +444,9 @@ body {
     display: block;
     font-size: 14px;
     color: rgba(255, 255, 255, 0.82);
+    line-height: 1.4;
+    max-height: 2.8em;
+    overflow: hidden;
 }
 
 .recent-tags {
@@ -588,6 +591,40 @@ body {
     }
 }
 
+@media (min-width: 1600px) {
+    .container {
+        max-width: 1820px;
+    }
+
+    .workspace {
+        grid-template-columns: 420px minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .preview-layout {
+        grid-template-columns: 420px minmax(0, 1fr);
+        min-height: 400px;
+    }
+
+    .drop-zone,
+    .focus-view {
+        min-height: 400px;
+    }
+
+    #focusImage {
+        max-height: 620px;
+    }
+
+    .note-section {
+        padding: 20px;
+    }
+
+    #noteContent {
+        min-height: 170px;
+        font-size: 17px;
+    }
+}
+
 @media (max-width: 1024px) {
     .workspace {
         grid-template-columns: 1fr;
@@ -643,5 +680,60 @@ body {
 
     .image-item {
         height: 78px;
+    }
+}
+
+@media (max-width: 390px) {
+    body {
+        padding: 8px;
+    }
+
+    .top-bar {
+        margin-bottom: 10px;
+    }
+
+    .app-title {
+        font-size: 20px;
+    }
+
+    .settings-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 14px;
+    }
+
+    .date-header {
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .nav-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 15px;
+    }
+
+    #noteDate {
+        font-size: 15px;
+        padding: 2px;
+    }
+
+    .today-badge {
+        padding: 2px 7px;
+        font-size: 11px;
+    }
+
+    .note-section {
+        padding: 12px;
+    }
+
+    #noteContent {
+        min-height: 105px;
+        font-size: 15px;
+    }
+
+    .drop-zone,
+    .focus-view {
+        min-height: 210px;
     }
 }
