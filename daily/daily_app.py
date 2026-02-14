@@ -148,4 +148,5 @@ if __name__ == "__main__":
     print("Daily Notes Server Starting...")
     print("URL: http://localhost:5000")
     print("=" * 50)
-    app.run(debug=True, port=5000)
+    debug_mode = os.getenv("FLASK_DEBUG", "0") == "1"
+    app.run(debug=debug_mode, port=5000)

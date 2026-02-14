@@ -10,6 +10,35 @@ CREATE TABLE IF NOT EXISTS daily_notes (
     image_urls TEXT[] DEFAULT '{}'   -- 이미지 URL 배열 (여러 장)
 );
 
+-- 기존 중복 데이터 정리 (같은 날짜는 최신 1건만 유지)
+WITH ranked AS (
+    SELECT
+        id,
+        ROW_NUMBER() OVER (
+            PARTITION BY note_date
+            ORDER BY created_at DESC, id DESC
+        ) AS rn
+    FROM daily_notes
+)
+DELETE FROM daily_notes d
+USING ranked r
+WHERE d.id = r.id
+  AND r.rn > 1;
+
+-- note_date 유니크 제약 추가 (날짜당 노트 1건 보장)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'daily_notes_note_date_key'
+          AND conrelid = 'daily_notes'::regclass
+    ) THEN
+        ALTER TABLE daily_notes
+        ADD CONSTRAINT daily_notes_note_date_key UNIQUE (note_date);
+    END IF;
+END $$;
+
 -- note_date에 인덱스 추가 (날짜별 조회 성능 향상)
 CREATE INDEX IF NOT EXISTS idx_daily_notes_date ON daily_notes(note_date DESC);
 

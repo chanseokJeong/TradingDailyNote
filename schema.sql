@@ -1,7 +1,7 @@
 -- Supabase SQL Editor에서 실행하세요
--- trades 테이블 생성
+-- trades 테이블 생성 (재실행 가능)
 
-CREATE TABLE trades (
+CREATE TABLE IF NOT EXISTS trades (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
@@ -22,10 +22,10 @@ CREATE TABLE trades (
     image_url TEXT                      -- 이미지 URL
 );
 
--- 인덱스 생성 (검색 성능 향상)
-CREATE INDEX idx_trades_ticker ON trades(ticker);
-CREATE INDEX idx_trades_trade_date ON trades(trade_date DESC);
-CREATE INDEX idx_trades_stock_name ON trades(stock_name);
+-- 인덱스 생성 (검색 성능 향상, 재실행 가능)
+CREATE INDEX IF NOT EXISTS idx_trades_ticker ON trades(ticker);
+CREATE INDEX IF NOT EXISTS idx_trades_trade_date ON trades(trade_date DESC);
+CREATE INDEX IF NOT EXISTS idx_trades_stock_name ON trades(stock_name);
 
 -- RLS (Row Level Security) 활성화
 -- 필요시 주석 해제
@@ -47,17 +47,37 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('trade-images', 'trade-images', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- 정책 재정의 (재실행 가능하도록 기존 정책 정리)
+DROP POLICY IF EXISTS "Public read access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated upload access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated delete access" ON storage.objects;
+DROP POLICY IF EXISTS "Anon upload access" ON storage.objects;
+DROP POLICY IF EXISTS "Anon delete access" ON storage.objects;
+
 -- 공개 읽기 정책 (누구나 이미지 조회 가능)
 CREATE POLICY "Public read access"
 ON storage.objects FOR SELECT
+TO public
 USING (bucket_id = 'trade-images');
 
--- 인증된 사용자 업로드 정책
-CREATE POLICY "Authenticated upload access"
+-- anon 키 기반 웹앱 업로드/삭제 허용
+CREATE POLICY "Anon upload access"
 ON storage.objects FOR INSERT
+TO anon
 WITH CHECK (bucket_id = 'trade-images');
 
--- 인증된 사용자 삭제 정책
+CREATE POLICY "Anon delete access"
+ON storage.objects FOR DELETE
+TO anon
+USING (bucket_id = 'trade-images');
+
+-- 로그인 사용자 업로드/삭제 허용
+CREATE POLICY "Authenticated upload access"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'trade-images');
+
 CREATE POLICY "Authenticated delete access"
 ON storage.objects FOR DELETE
+TO authenticated
 USING (bucket_id = 'trade-images');
